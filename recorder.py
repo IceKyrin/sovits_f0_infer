@@ -3,6 +3,7 @@ import wave
 input_filename = 1               # 麦克风采集的语音输入
 input_filepath = "record/"              # 输入文件的path
 import time
+import threading
 p = pyaudio.PyAudio()
 FORMAT = pyaudio.paInt16
 CHANNELS = 1                # 声道数
@@ -13,10 +14,20 @@ stream = p.open(format=FORMAT,
                         rate=RATE,
                         input=True,
                         frames_per_buffer=CHUNK)
+
+
+def save_audio(WAVE_OUTPUT_FILENAME,CHANNELS,FORMAT,RATE,frames):
+        wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
+        wf.setnchannels(CHANNELS)
+        wf.setsampwidth(p.get_sample_size(FORMAT))
+        wf.setframerate(RATE)
+        wf.writeframes(b''.join(frames))
+        wf.close()
+        
 def get_audio(filepath,stream):
-        a=time.time() 
+        #a=time.time() 
         CHUNK = 256
-        RECORD_SECONDS = 2
+        RECORD_SECONDS = 2  # 录音时间
         WAVE_OUTPUT_FILENAME = filepath
         
 
@@ -29,16 +40,12 @@ def get_audio(filepath,stream):
             frames.append(data)
         #print("*"*10, "录音结束\n")
 
+        threading.Thread(target=save_audio, args=(WAVE_OUTPUT_FILENAME,CHANNELS,FORMAT,RATE,frames,)).start()
         #stream.stop_stream()
         #stream.close()
         #p.terminate()
         #print(time.time()-a)
-        wf = wave.open(WAVE_OUTPUT_FILENAME, 'wb')
-        wf.setnchannels(CHANNELS)
-        wf.setsampwidth(p.get_sample_size(FORMAT))
-        wf.setframerate(RATE)
-        wf.writeframes(b''.join(frames))
-        wf.close()
+
         #print(time.time()-a)
 # 联合上一篇博客代码使用，就注释掉下面，单独使用就不注释
 while True:

@@ -52,15 +52,16 @@ name = 1
 bgm_names = ["bgm"]
 # 合成多少歌曲时，若半音数量不足、自动补齐相同数量（按第一首歌的半音）
 #trans = [int(input("move_half_steps"))]  # 加减半音数（可为正负）s
-trans = [-2]
+trans = [0]
 # 每首歌同时输出的speaker_id
 id_list = [0]
 
 # 每次合成长度，建议30s内，太高了爆掉显存(gtx1066一次15s以内）
 cut_time = 1
 model_name = "nyarumodel"  # 模型名称（pth文件夹下）
+#model_name = "Voice-change-G_1293000"
 config_name = "yilanqiu.json"  # 模型配置（config文件夹下）
-
+#config_name = "genshin-vc.json"
 # 自行下载hubert-soft-0d54a1f4.pt改名为hubert.pt放置于pth文件夹下
 # https://github.com/bshall/hubert/releases/tag/v0.1
 hubert_soft = hubert_model.hubert_soft('pth/hubert.pt')
@@ -79,9 +80,7 @@ _ = utils.load_checkpoint(f"pth/{model_name}.pth", net_g_ms, None)
 _ = net_g_ms.eval().to(dev)
 
 featureInput = FeatureInput(hps_ms.data.sampling_rate, hps_ms.data.hop_length)
-# 自动补齐
-#infer_tool.fill_a_to_b(bgm_names, clean_names)
-#infer_tool.fill_a_to_b(trans, clean_names)
+
 
 threading.Thread(target=os.system, args=("python recorder.py",)).start()
 while True:
@@ -89,13 +88,13 @@ while True:
     if os.path.exists("record/"+str(name)+".wav"):
         clean_names=[str(name)]
     else:
-        #print("waiting")
+
         continue
     try:
         for clean_name, bgm_name, tran in zip(clean_names, bgm_names, trans):
             infer_tool.resample_to_22050(f'./record/{clean_name}.wav')
             for speaker_id in id_list:
-                speakers = demjson.decode_file(f"configs/{config_name}")["speakers"]
+                #speakers = demjson.decode_file(f"configs/{config_name}")["speakers"]
                 out_audio_name = str(name)
 
     
@@ -124,20 +123,17 @@ while True:
                             0, 0].data.float().cpu().numpy()
                 os.system("del record\\"+str(name)+".wav")
             jump=False
-            #soundfile.write("./results/" + str(name)+".wav", audio, int(audio.shape[0] / input_size * 22050))
-            #_thread
-            #play("./results/" + str(name)+".wav")
-    except:
-        print("error")
+
+    except Exception as e:
+        print(e)
         os.system("del record\\"+str(name)+".wav")
         jump=True
     if jump:
         name+=1
         continue
-    #print("start "+f'./record/{clean_name}.wav')
+
     threading.Thread(target=play, args=(audio, int(audio.shape[0] / input_size * 22050),)).start()
-    #_thread.start_new_thread( play, (audio, int(audio.shape[0] / input_size * 22050),f'./raw/{clean_name}.wav', ) )
+
     name+=1
-                #print("%s success: %.2f%%" % (file_name, 100 * count / len(file_list)))
-            #merge.run(out_audio_name, bgm_name, out_audio_name)
+
     print("time taken: "+str(time.time()-a))
