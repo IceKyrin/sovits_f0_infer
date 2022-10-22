@@ -7,7 +7,7 @@ import torchaudio
 from flask import Flask, request, send_file
 from flask_cors import CORS
 
-from sovits.infer_tool import Svc
+from sovits.infer_tool import Svc, RealTimeVC
 
 app = Flask(__name__)
 
