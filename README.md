@@ -38,6 +38,8 @@ https://github.com/zhaohui8969/VST_NetProcess-/blob/master/doc/netProcessConfig.
 
 此模型中序号—— 0：猫雷、2：云灏、3：即霜、4：奕兰秋
 
+**这个是2.0模型，配合2.0分支的程序使用**
+
 模型下载地址：https://huggingface.co/spaces/xiaolang/sovits_f0/resolve/main/152_epochs.pth
 
 自行下载hubert-soft-0d54a1f4.pt改名为hubert.pt放置于pth文件夹下，一定要改名
