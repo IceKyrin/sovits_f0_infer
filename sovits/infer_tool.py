@@ -1,11 +1,15 @@
+import hashlib
+import json
 import logging
 import os
 import time
+from pathlib import Path
 
 import librosa
 import maad
 import numpy as np
 import onnxruntime
+import soundfile
 import torch
 import torchaudio
 
@@ -15,7 +19,36 @@ from sovits.mel_processing import spectrogram_torch
 from sovits.models import SynthesizerTrn, SynthesizerTrnForONNX
 from sovits.preprocess_wave import FeatureInput
 
-logging.getLogger('matplotlib').setLevel(logging.WARNING)
+if os.path.exists("chunks_temp.json"):
+    os.remove("chunks_temp.json")
+
+
+def read_temp(file_name):
+    if not os.path.exists(file_name):
+        with open(file_name, "w") as f:
+            f.write(json.dumps({"info": "temp_dict"}))
+        return {}
+    else:
+        try:
+            with open(file_name, "r") as f:
+                data = f.read()
+            data_dict = json.loads(data)
+            if os.path.getsize(file_name) > 50 * 1024 * 1024:
+                f_name = file_name.split("/")[-1]
+                print(f"clean {f_name}")
+                for wav_hash in list(data_dict.keys()):
+                    if int(time.time()) - int(data_dict[wav_hash]["time"]) > 14 * 24 * 3600:
+                        del data_dict[wav_hash]
+        except Exception as e:
+            print(e)
+            print(f"{file_name} error,auto rebuild file")
+            data_dict = {"info": "temp_dict"}
+        return data_dict
+
+
+def write_temp(file_name, data):
+    with open(file_name, "w") as f:
+        f.write(json.dumps(data))
 
 
 def timeit(func):
@@ -28,6 +61,19 @@ def timeit(func):
     return run
 
 
+def format_wav(audio_path):
+    if Path(audio_path).suffix == '.wav':
+        return
+    raw_audio, raw_sample_rate = librosa.load(audio_path, mono=True, sr=None)
+    soundfile.write(Path(audio_path).with_suffix(".wav"), raw_audio, raw_sample_rate)
+
+
+def fill_a_to_b(a, b):
+    if len(a) < len(b):
+        for _ in range(0, len(b) - len(a)):
+            a.append(a[0])
+
+
 def get_end_file(dir_path, end):
     file_lists = []
     for root, dirs, files in os.walk(dir_path):
@@ -37,6 +83,19 @@ def get_end_file(dir_path, end):
             if f_file.endswith(end):
                 file_lists.append(os.path.join(root, f_file).replace("\\", "/"))
     return file_lists
+
+
+def mkdir(paths: list):
+    for path in paths:
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+
+def get_md5(content):
+    return hashlib.new("md5", content).hexdigest()
+
+
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
 
 def resize2d_f0(x, target_len):
@@ -88,6 +147,7 @@ class Svc(object):
         self.net_g_ms = None
         self.hps_ms = utils.get_hparams_from_file(config_path)
         self.target_sample = self.hps_ms.data.sampling_rate
+        self.hop_size = self.hps_ms.data.hop_length
         self.speakers = self.hps_ms.speakers
         # 加载hubert
         self.hubert_soft = hubert_model.hubert_soft(hubert_path)
