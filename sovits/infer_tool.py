@@ -19,8 +19,7 @@ from sovits.mel_processing import spectrogram_torch
 from sovits.models import SynthesizerTrn, SynthesizerTrnForONNX
 from sovits.preprocess_wave import FeatureInput
 
-if os.path.exists("chunks_temp.json"):
-    os.remove("chunks_temp.json")
+logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
 
 def read_temp(file_name):
@@ -85,17 +84,8 @@ def get_end_file(dir_path, end):
     return file_lists
 
 
-def mkdir(paths: list):
-    for path in paths:
-        if not os.path.exists(path):
-            os.mkdir(path)
-
-
 def get_md5(content):
     return hashlib.new("md5", content).hexdigest()
-
-
-logging.getLogger('matplotlib').setLevel(logging.WARNING)
 
 
 def resize2d_f0(x, target_len):

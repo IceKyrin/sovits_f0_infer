@@ -11,7 +11,7 @@ from sovits import infer_tool
 from sovits import slicer
 from sovits.infer_tool import Svc
 
-chunks_dict = infer_tool.read_temp("./new_chunks_temp.json")
+chunks_dict = infer_tool.read_temp("./sovits/chunks_temp.json")
 logging.getLogger('numba').setLevel(logging.WARNING)
 
 model_name = "354_epochs.pth"  # 模型名称（pth文件夹下）
@@ -40,7 +40,7 @@ for clean_name, tran in zip(clean_names, trans):
         chunks = slicer.cut(wav_path, db_thresh=slice_db)
     print(chunks)
     chunks_dict[wav_hash] = {"chunks": chunks, "time": int(time.time())}
-    infer_tool.write_temp("./new_chunks_temp.json", chunks_dict)
+    infer_tool.write_temp("./sovits/chunks_temp.json", chunks_dict)
     audio_data, audio_sr = slicer.chunks2audio(wav_path, chunks)
 
     audio = []
