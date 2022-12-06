@@ -39,9 +39,7 @@ def infer(sid, audio_record, audio_upload, tran):
     o_audio = o_audio.cpu().numpy()
     out_path = f"./out_temp.wav"
     soundfile.write(out_path, o_audio, svc_model.target_sample)
-    mistake, var = svc_model.calc_error(audio_path, out_path, tran)
-    return f"分段误差参考：0.3优秀，0.5左右合理，少量0.8-1可以接受\n若偏差过大，请调整升降半音数；多次调整均过大、说明超出歌手音域\n半音偏差：{mistake}\n半音方差：{var}", (
-        svc_model.target_sample, o_audio)
+    return svc_model.target_sample, o_audio
 
 
 app = gr.Blocks()
@@ -49,14 +47,7 @@ with app:
     with gr.Tabs():
         with gr.TabItem("合成"):
             gr.Markdown(value="""
-            本模型为sovits_f0，支持**45s以内**的**无伴奏**wav、mp3、aac、m4a格式，或使用**网页内置**的录音（二选一）
-            
-            转换效果取决于源音频语气、节奏是否与目标音色相近。
-            
-            **即霜**转换女声效果较好，**女声常用音域误差均在1%-3%。**
-            
-            转换女声干声时，若目标音色为男声，**建议降6-9key**，**误差越接近0，音准越高**
-            
+            本模型为sovits_f0，支持**45s以内**的**无伴奏**wav、mp3、aac、m4a格式，或使用**网页内置**的录音（二选一）    
             """)
             model_name = gr.Dropdown(label="模型", choices=infer_tool.get_end_file("./pth", "pth"))
             config_json = gr.Dropdown(label="配置", choices=infer_tool.get_end_file("./configs", "json"))
@@ -71,11 +62,10 @@ with app:
                                         elem_id="audio_inputs")
                 vc_transform = gr.Number(label="变调（整数，可以正负，半音数量，升高八度就是12）", value=0)
                 vc_submit = gr.Button("转换", variant="primary")
-                out_message = gr.Textbox(label="Output Message")
                 out_audio = gr.Audio(label="Output Audio")
             vc_config.click(load_model, [model_name, config_json], [model_mess, speaker_id])
             vc_submit.click(infer, [speaker_id, record_input, upload_input, vc_transform],
-                            [out_message, out_audio])
+                            [out_audio])
         with gr.TabItem("使用说明"):
             gr.Markdown(value="""
                         0、合集：https://github.com/IceKyrin/sovits_guide/blob/main/README.md

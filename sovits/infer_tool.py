@@ -161,26 +161,6 @@ class Svc(object):
         else:
             _ = self.net_g_ms.eval().to(self.dev)
 
-    def calc_error(self, in_path, out_path, tran):
-        a, s = torchaudio.load(in_path)
-        input_pitch = self.feature_input.compute_f0(a.cpu().numpy()[0], s)
-        a, s = torchaudio.load(out_path)
-        output_pitch = self.feature_input.compute_f0(a.cpu().numpy()[0], s)
-        sum_y = []
-        if np.sum(input_pitch == 0) / len(input_pitch) > 0.9:
-            mistake, var_take = 0, 0
-        else:
-            for i in range(min(len(input_pitch), len(output_pitch))):
-                if input_pitch[i] > 0 and output_pitch[i] > 0:
-                    sum_y.append(abs(f0_to_pitch(output_pitch[i]) - (f0_to_pitch(input_pitch[i]) + tran)))
-            num_y = 0
-            for x in sum_y:
-                num_y += x
-            len_y = len(sum_y) if len(sum_y) else 1
-            mistake = round(float(num_y / len_y), 2)
-            var_take = round(float(np.std(sum_y, ddof=1)), 2)
-        return mistake, var_take
-
     def get_units(self, source, sr):
         source = torchaudio.functional.resample(source, sr, 16000)
         if len(source.shape) == 2 and source.shape[1] >= 2:
@@ -223,17 +203,6 @@ class Svc(object):
             use_time = time.time() - start
             print("vits use time:{}".format(use_time))
         return audio, audio.shape[-1]
-
-    def load_audio_to_torch(self, full_path):
-        audio, sampling_rate = librosa.load(full_path, sr=self.target_sample, mono=True)
-        return torch.FloatTensor(audio.astype(np.float32))
-
-    def flask_format_wav(self, input_wav_path, daw_sample):
-        raw_audio, raw_sample_rate = torchaudio.load(input_wav_path)
-        tar_audio = torchaudio.functional.resample(raw_audio, daw_sample, self.target_sample)
-        if len(tar_audio.shape) == 2 and tar_audio.shape[1] >= 2:
-            tar_audio = torch.mean(tar_audio, dim=0).unsqueeze(0)
-        return tar_audio.cpu().numpy(), self.target_sample
 
 
 class SvcONNXInferModel(object):
