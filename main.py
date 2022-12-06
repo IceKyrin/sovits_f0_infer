@@ -11,8 +11,8 @@ from sovits import infer_tool
 from sovits import slicer
 from sovits.infer_tool import Svc
 
-chunks_dict = infer_tool.read_temp("./sovits/chunks_temp.json")
 logging.getLogger('numba').setLevel(logging.WARNING)
+chunks_dict = infer_tool.read_temp("./sovits/chunks_temp.json")
 
 model_name = "354_epochs.pth"  # 模型名称（pth文件夹下）
 config_name = "config.json"
@@ -20,7 +20,7 @@ svc_model = Svc(f"./pth/{model_name}", f"./configs/{config_name}")
 infer_tool.mkdir(["./raw", "./pth", "./results"])
 
 # 支持多个wav文件，放在raw文件夹下
-clean_names = ["十年"]
+clean_names = ["时间煮雨"]
 trans = [-3]  # 音高调整，支持正负（半音）
 id_list = [1]  # 每次同时合成多序号音色
 slice_db = -40  # 默认-40，嘈杂的音频可以-30，干声保留呼吸可以-50
@@ -58,9 +58,7 @@ for clean_name, tran in zip(clean_names, trans):
                 _audio = np.zeros(length)
             else:
                 out_audio, out_sr = svc_model.infer(spk_id, tran, raw_path)
-                # svc方式，仅支持模型内部音色互转，不建议使用
-                # out_audio, out_sr = svc_model.vc(2, spk_id, raw_path)
                 _audio = out_audio.cpu().numpy()
-                audio.extend(list(_audio))
+            audio.extend(list(_audio))
         res_path = f'./results/{clean_name}_{tran}key_{svc_model.speakers[spk_id]}.{wav_format}'
         soundfile.write(res_path, audio, svc_model.target_sample, format=wav_format)
