@@ -15,7 +15,6 @@ import torchaudio
 
 from sovits import hubert_model
 from sovits import utils
-from sovits.mel_processing import spectrogram_torch
 from sovits.models import SynthesizerTrn, SynthesizerTrnForONNX
 from sovits.preprocess_wave import FeatureInput
 
@@ -65,12 +64,6 @@ def format_wav(audio_path):
         return
     raw_audio, raw_sample_rate = librosa.load(audio_path, mono=True, sr=None)
     soundfile.write(Path(audio_path).with_suffix(".wav"), raw_audio, raw_sample_rate)
-
-
-def fill_a_to_b(a, b):
-    if len(a) < len(b):
-        for _ in range(0, len(b) - len(a)):
-            a.append(a[0])
 
 
 def get_end_file(dir_path, end):
@@ -234,30 +227,6 @@ class Svc(object):
     def load_audio_to_torch(self, full_path):
         audio, sampling_rate = librosa.load(full_path, sr=self.target_sample, mono=True)
         return torch.FloatTensor(audio.astype(np.float32))
-
-    def vc(self, origin_id, target_id, raw_path):
-        audio = self.load_audio_to_torch(raw_path)
-        y = audio.unsqueeze(0).to(self.dev)
-
-        spec = spectrogram_torch(y, self.hps_ms.data.filter_length,
-                                 self.hps_ms.data.sampling_rate, self.hps_ms.data.hop_length,
-                                 self.hps_ms.data.win_length, center=False)
-        spec_lengths = torch.LongTensor([spec.size(-1)]).to(self.dev)
-        sid_src = torch.LongTensor([origin_id]).to(self.dev)
-
-        with torch.no_grad():
-            sid_tgt = torch.LongTensor([target_id]).to(self.dev)
-            audio = self.net_g_ms.voice_conversion(spec, spec_lengths, sid_src=sid_src, sid_tgt=sid_tgt)[0][
-                0, 0].data.float()
-        return audio, audio.shape[-1]
-
-    def format_wav(self, audio_path):
-        raw_audio, raw_sample_rate = torchaudio.load(audio_path)
-        if len(raw_audio.shape) == 2 and raw_audio.shape[1] >= 2:
-            raw_audio = torch.mean(raw_audio, dim=0).unsqueeze(0)
-        tar_audio = torchaudio.functional.resample(raw_audio, raw_sample_rate, self.target_sample)
-        torchaudio.save(audio_path[:-4] + ".wav", tar_audio, self.target_sample)
-        return tar_audio, self.target_sample
 
     def flask_format_wav(self, input_wav_path, daw_sample):
         raw_audio, raw_sample_rate = torchaudio.load(input_wav_path)
