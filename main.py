@@ -28,7 +28,9 @@ wav_format = 'flac'  # 音频输出格式
 
 infer_tool.fill_a_to_b(trans, clean_names)
 for clean_name, tran in zip(clean_names, trans):
-    raw_audio_path = f"./raw/{clean_name}.wav"
+    raw_audio_path = f"raw/{clean_name}"
+    if "." not in raw_audio_path:
+        raw_audio_path += ".wav"
     infer_tool.format_wav(raw_audio_path)
     wav_path = Path(raw_audio_path).with_suffix('.wav')
     audio, sr = librosa.load(wav_path, mono=True, sr=None)
@@ -43,12 +45,8 @@ for clean_name, tran in zip(clean_names, trans):
     infer_tool.write_temp("./sovits/chunks_temp.json", chunks_dict)
     audio_data, audio_sr = slicer.chunks2audio(wav_path, chunks)
 
-    audio = []
-
     for spk_id in id_list:
-        var_list = []
-        mis_list = []
-        count = 0
+        audio = []
         for (slice_tag, data) in audio_data:
             print(f'#=====segment start, {round(len(data) / audio_sr, 3)}s======')
             length = int(np.ceil(len(data) / audio_sr * svc_model.target_sample))
@@ -57,20 +55,12 @@ for clean_name, tran in zip(clean_names, trans):
             raw_path.seek(0)
             if slice_tag:
                 print('jump empty segment')
-                _f0_tst, _f0_pred, _audio = (
-                    np.zeros(int(np.ceil(length / svc_model.hop_size))),
-                    np.zeros(int(np.ceil(length / svc_model.hop_size))),
-                    np.zeros(length))
+                _audio = np.zeros(length)
             else:
                 out_audio, out_sr = svc_model.infer(spk_id, tran, raw_path)
                 # svc方式，仅支持模型内部音色互转，不建议使用
                 # out_audio, out_sr = svc_model.vc(2, spk_id, raw_path)
                 _audio = out_audio.cpu().numpy()
                 audio.extend(list(_audio))
-            fix_audio = np.zeros(length)
-            fix_audio[:] = np.mean(_audio)
-            fix_audio[:len(_audio)] = _audio[0 if len(_audio) < len(fix_audio) else len(_audio) - len(fix_audio):]
-            audio.extend(list(fix_audio))
-            count += 1
         res_path = f'./results/{clean_name}_{tran}key_{svc_model.speakers[spk_id]}.{wav_format}'
         soundfile.write(res_path, audio, svc_model.target_sample, format=wav_format)
